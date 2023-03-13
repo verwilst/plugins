@@ -24,7 +24,7 @@ class HomeAssistantPlugin(OMPluginBase):
     HomeAssistant plugin using an MQTT broker
     """
     name = 'HomeAssistant'
-    version = '0.0.124'
+    version = '0.0.133'
     interfaces = [('config', '1.0')]
 
     # configuration
@@ -231,6 +231,18 @@ class HomeAssistantPlugin(OMPluginBase):
     @background_task
     def background_task_sensor_status(self):
         while True:
-            sensors = SensorFactory.from_webinterface(self.webinterface)
-            logger.info(sensors)
-            time.sleep(60)
+            result = json.loads(self.webinterface.get_sensor_status())
+            if result['success'] is False:
+                logger.error('Failed to get sensor status: {}'.format(result.get('msg', 'Unknown error')))
+                return
+
+            for status in result['status']:
+                sensor = self.sensors.by_id(status['id'])
+                sensor['value'] = status['value']
+                thread = Thread(
+                    target=self.mqtt_client.send_state,
+                    args=[sensor]
+                )
+                thread.start()
+
+            time.sleep(120)

@@ -1,7 +1,11 @@
-from .models import Light, Output
+from .models import Light, Output, Entity
 
+class Entities(list):
 
-class Outputs(list):
+    def by_id(self, entity_id) -> Entity:
+        return next((item for item in self if item.get('id') == entity_id), None)
+
+class Outputs(Entities):
 
     def get_lights(self):
         lights = Outputs()
@@ -10,14 +14,10 @@ class Outputs(list):
                 lights.append(output)
         return lights
 
-    def by_id(self, output_id) -> Output:
-        return next((item for item in self if item.get('id') == output_id), None)
-
     def by_state(self, state):
         return [(item for item in self if item.get('state') == state)]
 
 
-class Sensors(list):
+class Sensors(Entities):
+    pass
 
-    def by_id(self, sensor_id) -> Output:
-        return next((item for item in self if item.get('id') == output_id), None)

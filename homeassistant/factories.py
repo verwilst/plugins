@@ -58,7 +58,7 @@ class SensorFactory(object):
 
         sensors = Sensors()
         for sensor in json_sensors['config']:
-            sensor['state'] = None
+            sensor['value'] = None
             sensors.append(
                 Sensor(sensor, webinterface=webinterface)
             )
