@@ -9,9 +9,3 @@ MQTT_OUTPUT_COMMAND_TOPIC = 'openmotics/output/+/set'
 MQTT_OUTPUT_STATE_TOPIC = 'openmotics/output/+/state'
 MQTT_HOMEASSISTANT_STATUS_TOPIC = 'homeassistant/status'
 MQTT_HOMEASSISTANT_CONFIG_TOPIC = 'homeassistant/{}/{}/config'
-
-
-class OutputState(Enum):
-    UNKNOWN = 'UNKNOWN'
-    ON = 'ON'
-    OFF = 'OFF'

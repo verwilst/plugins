@@ -10,7 +10,7 @@ from threading import Thread
 from .const import MQTT_OUTPUT_COMMAND_TOPIC, MQTT_HOMEASSISTANT_STATUS_TOPIC
 
 from .outputfactory import OutputFactory
-from .models.mqttclient import MQTTClient
+from .models import MQTTClient
 
 from plugin_runtime.base import OMPluginBase, PluginConfigChecker, om_expose, output_status
 if False:  # MYPY

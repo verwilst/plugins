@@ -1,4 +1,4 @@
-# Hello world plugin
+# HomeAssistant
 The hello world plugin is designed to give an initial feel on how to create a plugin and add it to a gateway.
 The purpose will be to "say hello" based on changes in the configuration.
 

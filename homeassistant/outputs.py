@@ -1,5 +1,4 @@
-from .models.light import Light
-from .models.output import Output
+from .models import Light, Output
 
 
 class Outputs(list):

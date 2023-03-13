@@ -1,4 +1,4 @@
-from .models.light import Light
+from .models import Light
 from .outputs import Outputs
 
 from .const import OUTPUT_TYPE_LIGHT
