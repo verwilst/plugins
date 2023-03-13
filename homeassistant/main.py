@@ -9,10 +9,10 @@ import re
 from threading import Thread
 from .const import MQTT_OUTPUT_COMMAND_TOPIC, MQTT_HOMEASSISTANT_STATUS_TOPIC
 
-from .outputfactory import OutputFactory
+from .factories import OutputFactory, SensorFactory
 from .models import MQTTClient
 
-from plugin_runtime.base import OMPluginBase, PluginConfigChecker, om_expose, output_status
+from plugin_runtime.base import OMPluginBase, PluginConfigChecker, om_expose, output_status, background_task
 if False:  # MYPY
     pass
 
@@ -24,7 +24,7 @@ class HomeAssistantPlugin(OMPluginBase):
     HomeAssistant plugin using an MQTT broker
     """
     name = 'HomeAssistant'
-    version = '0.0.106'
+    version = '0.0.124'
     interfaces = [('config', '1.0')]
 
     # configuration
@@ -54,13 +54,14 @@ class HomeAssistantPlugin(OMPluginBase):
         logger.info('Starting %s plugin %s ...', self.name, self.version)
 
         # set config on default config and instantiate a validator
-        self._config = self.default_config
-        self._config_checker = PluginConfigChecker(self.config_description)
+        self._config = self.read_config(HomeAssistantPlugin.default_config)
+        self._config_checker = PluginConfigChecker(HomeAssistantPlugin.config_description)
 
         self._read_config()
 
         self.mqtt_client = None
         self.outputs = None
+        self.sensors = None
 
         self._load_configurations()
 
@@ -132,7 +133,14 @@ class HomeAssistantPlugin(OMPluginBase):
                 except RuntimeError as err:
                     logger.error(err)
 
-            should_load = not all([self.outputs])
+            if self.sensors is None or replace is True:
+                try:
+                    self.sensors = SensorFactory.from_webinterface(self.webinterface)
+                    logger.info('Detected {0} sensors'.format(len(self.sensors)))
+                except RuntimeError as err:
+                    logger.error(err)
+
+            should_load = not all([self.outputs, self.sensors])
             if should_load:
                 logger.info('Retrying loading of configurations')
                 time.sleep(15)
@@ -177,7 +185,7 @@ class HomeAssistantPlugin(OMPluginBase):
             if payload == 'online':
                 # When HomeAssistant reloads/starts, get the latest configurations to make sure we're up to date.
                 self._load_configurations(replace=True)
-                self.mqtt_client.send_configs(self.outputs)
+                self.mqtt_client.send_configs(self.outputs + self.sensors)
 
         else:
             logger.info('Message with topic {0} ignored'.format(msg.topic))
@@ -200,28 +208,29 @@ class HomeAssistantPlugin(OMPluginBase):
     @output_status
     def output_status(self, status):
         if self._enabled:
-            logger.info("states: {}".format(status))
-
             status_ids = [item[0] for item in status]
 
             for output in self.outputs:
                 if output['id'] in status_ids:
                     if output.get('state') != 'ON':
-                        logger.info('Set state for {} to {}'.format(output.get('id'), 'ON'))
                         output.set_state('ON')
                         thread = Thread(
                             target=self.mqtt_client.send_state,
-                            args=output
+                            args=[output]
                         )
                         thread.start()
-                        self.mqtt_client.send_state(output)
                 else:
                     if output.get('state') != 'OFF':
-                        logger.info('Set state for {} to {}'.format(output.get('id'), 'OFF'))
                         output.set_state('OFF')
                         thread = Thread(
                             target=self.mqtt_client.send_state,
-                            args=output
+                            args=[output]
                         )
                         thread.start()
 
+    @background_task
+    def background_task_sensor_status(self):
+        while True:
+            sensors = SensorFactory.from_webinterface(self.webinterface)
+            logger.info(sensors)
+            time.sleep(60)

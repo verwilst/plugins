@@ -15,3 +15,9 @@ class Outputs(list):
 
     def by_state(self, state):
         return [(item for item in self if item.get('state') == state)]
+
+
+class Sensors(list):
+
+    def by_id(self, sensor_id) -> Output:
+        return next((item for item in self if item.get('id') == output_id), None)
