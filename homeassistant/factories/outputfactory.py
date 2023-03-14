@@ -1,11 +1,8 @@
-from .models import Light, Sensor
-from .lists import Outputs, Sensors
-
-from .const import OUTPUT_TYPE_LIGHT
-import logging
 import json
+from ..lists import Outputs
+from ..models import Light
 
-logger = logging.getLogger(__name__)
+from ..const import OUTPUT_TYPE_LIGHT
 
 
 class OutputFactory(object):
@@ -48,20 +45,3 @@ class OutputFactory(object):
                     Light({k: output[k] for k in ('id', 'name', 'state')}, webinterface=webinterface)
                 )
         return outputs
-
-
-class SensorFactory(object):
-
-    @classmethod
-    def from_webinterface(cls, webinterface):
-        json_sensors = json.loads(webinterface.get_sensor_configurations())
-
-        sensors = Sensors()
-        for sensor in json_sensors['config']:
-            sensor['value'] = None
-            sensors.append(
-                Sensor(sensor, webinterface=webinterface)
-            )
-
-        return sensors
-

@@ -9,7 +9,7 @@ import re
 from threading import Thread
 from .const import MQTT_OUTPUT_COMMAND_TOPIC, MQTT_HOMEASSISTANT_STATUS_TOPIC
 
-from .factories import OutputFactory, SensorFactory
+from .factories import OutputFactory, InputFactory, SensorFactory
 from .models import MQTTClient
 
 from plugin_runtime.base import OMPluginBase, PluginConfigChecker, om_expose, output_status, background_task
@@ -50,7 +50,7 @@ class HomeAssistantPlugin(OMPluginBase):
 
     def __init__(self, webinterface, connector):
         super(HomeAssistantPlugin, self).__init__(webinterface=webinterface,
-                                                connector=connector)
+                                                  connector=connector)
         logger.info('Starting %s plugin %s ...', self.name, self.version)
 
         # set config on default config and instantiate a validator
@@ -59,8 +59,9 @@ class HomeAssistantPlugin(OMPluginBase):
 
         self._read_config()
 
-        self.mqtt_client = None
+        self.mqttclient = None
         self.outputs = None
+        self.inputs = None
         self.sensors = None
 
         self._load_configurations()
@@ -133,6 +134,13 @@ class HomeAssistantPlugin(OMPluginBase):
                 except RuntimeError as err:
                     logger.error(err)
 
+            if self.inputs is None or replace is True:
+                try:
+                    self.inputs = InputFactory.from_webinterface(self.webinterface)
+                    logger.info('Detected {0} inputs'.format(len(self.inputs)))
+                except RuntimeError as err:
+                    logger.error(err)
+
             if self.sensors is None or replace is True:
                 try:
                     self.sensors = SensorFactory.from_webinterface(self.webinterface)
@@ -148,14 +156,14 @@ class HomeAssistantPlugin(OMPluginBase):
     def _try_mqtt_connect(self):
         if self._enabled is True:
             try:
-                self.mqtt_client = MQTTClient()
+                self.mqttclient = MQTTClient()
                 if self._mqtt_username not in [None, '']:
                     logger.info("MQTTClient is using username '{0}' and password".format(self._mqtt_username))
-                    self.mqtt_client.username_pw_set(self._mqtt_username, self._mqtt_password)
-                self.mqtt_client.on_message = self.on_message
-                self.mqtt_client.on_connect = self.on_connect
-                self.mqtt_client.connect(self._mqtt_hostname, self._mqtt_port, 5)
-                self.mqtt_client.loop_start()
+                    self.mqttclient.username_pw_set(self._mqtt_username, self._mqtt_password)
+                self.mqttclient.on_message = self.on_message
+                self.mqttclient.on_connect = self.on_connect
+                self.mqttclient.connect(self._mqtt_hostname, self._mqtt_port, 5)
+                self.mqttclient.loop_start()
             except Exception as ex:
                 logger.exception('Error connecting to MQTT broker')
         else:
@@ -178,14 +186,15 @@ class HomeAssistantPlugin(OMPluginBase):
                 return
 
             output.set_state(payload)
-            self.mqtt_client.send_state(output)
+            self.mqttclient.send_state(output)
 
         # HomeAssistant status message
         elif msg.topic == MQTT_HOMEASSISTANT_STATUS_TOPIC:
             if payload == 'online':
                 # When HomeAssistant reloads/starts, get the latest configurations to make sure we're up to date.
                 self._load_configurations(replace=True)
-                self.mqtt_client.send_configs(self.outputs + self.sensors)
+                self.outputs.publish_config(self.mqttclient)
+                self.sensors.publish_config(self.mqttclient)
 
         else:
             logger.info('Message with topic {0} ignored'.format(msg.topic))
@@ -200,7 +209,7 @@ class HomeAssistantPlugin(OMPluginBase):
 
         for topic in [MQTT_OUTPUT_COMMAND_TOPIC, MQTT_HOMEASSISTANT_STATUS_TOPIC]:
             try:
-                self.mqtt_client.subscribe(topic)
+                self.mqttclient.subscribe(topic)
                 logger.info('Subscribed to {0}'.format(topic))
             except Exception as ex:
                 logger.exception(f'Could not subscribe to {topic}')
@@ -215,16 +224,16 @@ class HomeAssistantPlugin(OMPluginBase):
                     if output.get('state') != 'ON':
                         output.set_state('ON')
                         thread = Thread(
-                            target=self.mqtt_client.send_state,
-                            args=[output]
+                            target=output.publish_state,
+                            args=(self.mqttclient,)
                         )
                         thread.start()
                 else:
                     if output.get('state') != 'OFF':
                         output.set_state('OFF')
                         thread = Thread(
-                            target=self.mqtt_client.send_state,
-                            args=[output]
+                            target=output.publish_state,
+                            args=(self.mqttclient,)
                         )
                         thread.start()
 
@@ -238,10 +247,10 @@ class HomeAssistantPlugin(OMPluginBase):
 
             for status in result['status']:
                 sensor = self.sensors.by_id(status['id'])
-                sensor['value'] = status['value']
+                sensor['state'] = status['value']
                 thread = Thread(
-                    target=self.mqtt_client.send_state,
-                    args=[sensor]
+                    target=sensor.publish_state,
+                    args=[self.mqttclient]
                 )
                 thread.start()
 
