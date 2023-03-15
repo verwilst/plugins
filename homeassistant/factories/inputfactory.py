@@ -1,6 +1,7 @@
 import json
 import logging
 from ..lists import Inputs
+from ..models import Input
 
 logger = logging.getLogger(__name__)
 
@@ -16,4 +17,18 @@ class InputFactory(object):
         if json_inputs['success'] is False:
             raise RuntimeError('Failed to get input configurations: {0}'.format(json_inputs))
 
-        return Inputs()
+        inputs = Inputs()
+        for input in json_inputs['config']:
+
+            # Ignore unused outputs
+            if not input['in_use']:
+                continue
+
+            # Remove inputs without a name
+            if input['name'] == "":
+                continue
+
+            logger.info(input)
+            inputs.append(Input(input))
+
+        return inputs

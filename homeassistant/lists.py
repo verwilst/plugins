@@ -22,11 +22,10 @@ class Entities(list):
 class Outputs(Entities):
 
     def get_lights(self):
-        return [(output for output in self if isinstance(output, Light))]
-
+        return [output for output in self if isinstance(output, Light)]
 
     def by_state(self, state):
-        return [(item for item in self if item.get('state') == state)]
+        return [item for item in self if item.get('state') == state]
 
 
 class Inputs(Entities):

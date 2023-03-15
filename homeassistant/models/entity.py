@@ -24,7 +24,7 @@ class Entity(ABC, dict):
 
     def publish_state(self, mqttclient):
         try:
-            self.publish(topic=self.get_mqtt_state_topic(),
+            mqttclient.publish(topic=self.get_mqtt_state_topic(),
                          payload=self.get_mqtt_state_payload(),
                          qos=1,
                          retain=True)
@@ -33,7 +33,7 @@ class Entity(ABC, dict):
 
     def publish_config(self, mqttclient):
         try:
-            self.publish(self.get_mqtt_config_topic(),
+            mqttclient.publish(self.get_mqtt_config_topic(),
                          payload=self.get_mqtt_config_payload(),
                          qos=1,
                          retain=False)

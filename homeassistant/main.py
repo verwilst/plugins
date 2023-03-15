@@ -6,11 +6,12 @@ import logging
 import time
 import six
 import re
+import sys
+
 from threading import Thread
 from .const import MQTT_OUTPUT_COMMAND_TOPIC, MQTT_HOMEASSISTANT_STATUS_TOPIC
 
 from .factories import OutputFactory, InputFactory, SensorFactory
-from .models import MQTTClient
 
 from plugin_runtime.base import OMPluginBase, PluginConfigChecker, om_expose, output_status, background_task
 if False:  # MYPY
@@ -24,7 +25,7 @@ class HomeAssistantPlugin(OMPluginBase):
     HomeAssistant plugin using an MQTT broker
     """
     name = 'HomeAssistant'
-    version = '0.0.133'
+    version = '0.0.147'
     interfaces = [('config', '1.0')]
 
     # configuration
@@ -58,6 +59,10 @@ class HomeAssistantPlugin(OMPluginBase):
         self._config_checker = PluginConfigChecker(HomeAssistantPlugin.config_description)
 
         self._read_config()
+
+        paho_mqtt_wheel = '/opt/openmotics/python/plugins/HomeAssistant/paho_mqtt-1.6.1-py3-none-any.whl'
+        if paho_mqtt_wheel not in sys.path:
+            sys.path.insert(0, paho_mqtt_wheel)
 
         self.mqttclient = None
         self.outputs = None
@@ -156,7 +161,8 @@ class HomeAssistantPlugin(OMPluginBase):
     def _try_mqtt_connect(self):
         if self._enabled is True:
             try:
-                self.mqttclient = MQTTClient()
+                import paho.mqtt.client as mqtt
+                self.mqttclient = mqtt.Client()
                 if self._mqtt_username not in [None, '']:
                     logger.info("MQTTClient is using username '{0}' and password".format(self._mqtt_username))
                     self.mqttclient.username_pw_set(self._mqtt_username, self._mqtt_password)
@@ -186,7 +192,7 @@ class HomeAssistantPlugin(OMPluginBase):
                 return
 
             output.set_state(payload)
-            self.mqttclient.send_state(output)
+            output.publish_state(self.mqttclient)
 
         # HomeAssistant status message
         elif msg.topic == MQTT_HOMEASSISTANT_STATUS_TOPIC:
