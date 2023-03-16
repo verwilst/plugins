@@ -22,6 +22,10 @@ class Entity(ABC, dict):
     def get_mqtt_config_payload(self):
         pass
 
+    @abstractmethod
+    def set_state(self, new_state):
+        pass
+
     def publish_state(self, mqttclient):
         try:
             mqttclient.publish(topic=self.get_mqtt_state_topic(),

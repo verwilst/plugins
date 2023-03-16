@@ -10,6 +10,7 @@ MQTT_OUTPUT_STATE_TOPIC = 'openmotics/output/+/state'
 MQTT_HOMEASSISTANT_STATUS_TOPIC = 'homeassistant/status'
 MQTT_HOMEASSISTANT_CONFIG_TOPIC = 'homeassistant/{}/{}/config'
 MQTT_SENSOR_STATE_TOPIC = 'openmotics/sensor/{id}/state'
+MQTT_INPUT_STATE_TOPIC = 'openmotics/input/+/state'
 
 SENSOR_UNIT = {'percent': '%',
                'celcius': '°C'}

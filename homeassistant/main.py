@@ -13,7 +13,7 @@ from .const import MQTT_OUTPUT_COMMAND_TOPIC, MQTT_HOMEASSISTANT_STATUS_TOPIC
 
 from .factories import OutputFactory, InputFactory, SensorFactory
 
-from plugin_runtime.base import OMPluginBase, PluginConfigChecker, om_expose, output_status, background_task
+from plugin_runtime.base import OMPluginBase, PluginConfigChecker, om_expose, output_status, input_status, background_task
 if False:  # MYPY
     pass
 
@@ -25,7 +25,7 @@ class HomeAssistantPlugin(OMPluginBase):
     HomeAssistant plugin using an MQTT broker
     """
     name = 'HomeAssistant'
-    version = '0.0.147'
+    version = '0.0.152'
     interfaces = [('config', '1.0')]
 
     # configuration
@@ -200,6 +200,7 @@ class HomeAssistantPlugin(OMPluginBase):
                 # When HomeAssistant reloads/starts, get the latest configurations to make sure we're up to date.
                 self._load_configurations(replace=True)
                 self.outputs.publish_config(self.mqttclient)
+                self.inputs.publish_config(self.mqttclient)
                 self.sensors.publish_config(self.mqttclient)
 
         else:
@@ -242,6 +243,23 @@ class HomeAssistantPlugin(OMPluginBase):
                             args=(self.mqttclient,)
                         )
                         thread.start()
+
+    @input_status(version=2)
+    def input_status(self, data):
+        if self._enabled:
+            input_id = data.get('input_id')
+            input = self.inputs.by_id(input_id)
+
+            if input is None:
+                logger.info('Unknown input {0} ignored'.format(input_id))
+                return
+
+            state = 'ON' if data.get('status') else 'OFF'
+
+            if input.get('state') != state:
+                input.set_state(state)
+                input.publish_state(self.mqttclient)
+
 
     @background_task
     def background_task_sensor_status(self):

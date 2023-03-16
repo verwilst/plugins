@@ -15,9 +15,6 @@ class Output(Entity):
         self._webinterface = webinterface
 
     def set_state(self, new_state):
-        """
-        Return False when the changed didn't change, otherwise return True
-        """
 
         if new_state not in ['ON', 'OFF']:
             logger.error('Unknown state received for output {}: '.format(new_state))

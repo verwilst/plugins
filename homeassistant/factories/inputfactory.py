@@ -11,7 +11,8 @@ class InputFactory(object):
     @classmethod
     def from_webinterface(cls, webinterface) -> Inputs:
         json_inputs = json.loads(webinterface.get_input_configurations())
-        logger.info(json_inputs)
+
+        logger.info("GROUP ACTIONS {}".format(webinterface.get_group_action_configurations()))
 
         # Unable to fetch output configurations correctly
         if json_inputs['success'] is False:
