@@ -25,7 +25,7 @@ class Input(Entity):
             "unique_id": f'input_{input_id}',
             "state_topic": "~/state",
             "device": {
-                "identifiers": input_id,
+                "identifiers": f'input_{input_id}',
                 "name": self.pretty_name()
             }
         }

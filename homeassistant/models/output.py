@@ -64,7 +64,7 @@ class Output(Entity):
             "state_topic": "~/state",
             "command_topic": "~/set",
             "device": {
-                "identifiers": output_id,
+                "identifiers": f'output_{output_id}',
                 "name": self.pretty_name()
             }
         })
