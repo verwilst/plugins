@@ -21,9 +21,8 @@ class InputFactory(object):
         inputs = Inputs()
         for input in json_inputs['config']:
 
-            # Ignore unused outputs
-            if not input['in_use']:
-                continue
+            # We DO NOT ignore devices that are not in use. As long as they have a name, we're adding them.
+            # We need to assign an empty OM automation otherwise for them to be visible.
 
             # Remove inputs without a name
             if input['name'] == "":

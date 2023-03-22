@@ -19,7 +19,7 @@ class Input(Entity):
 
     def get_mqtt_config_payload(self):
         input_id = self.get('id')
-        return json.dumps({
+        payload = {
             "~": f'openmotics/input/{input_id}',
             "name": self.pretty_name(),
             "unique_id": f'input_{input_id}',
@@ -28,10 +28,27 @@ class Input(Entity):
                 "identifiers": input_id,
                 "name": self.pretty_name()
             }
-        })
+        }
+
+        if self.get_class() is not None:
+            payload['device_class'] = self.get_class()
+
+        return json.dumps(payload)
 
     def get_type(self):
         return "binary_sensor"
+
+    def get_class(self):
+        """
+        Get device class of binary sensor
+        """
+        if self.get('name').startswith('door_'):
+            return 'door'
+        elif self.get('name').startswith('window_'):
+            return 'window'
+        elif self.get('name').startswith('motion_'):
+            return 'motion'
+        return None
 
     def pretty_name(self):
         return self.get('name').replace('_', ' ').title()

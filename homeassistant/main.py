@@ -25,7 +25,7 @@ class HomeAssistantPlugin(OMPluginBase):
     HomeAssistant plugin using an MQTT broker
     """
     name = 'HomeAssistant'
-    version = '0.0.152'
+    version = '0.0.153'
     interfaces = [('config', '1.0')]
 
     # configuration
