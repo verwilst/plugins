@@ -34,10 +34,15 @@ class Dummy(OMPluginBase):
     """
 
     name = "Dummy"
-    version = "2.2.1"
+    version = "2.2.3"
     interfaces = [("config", "1.0")]
-
-    default_config = {}
+    default_config = {
+        "sensors": [],
+        "hot_water": False,
+        "measurement_counters": [],
+        "ventilation": False,
+        "notification": False,
+    }
 
     def __init__(self, webinterface, connector):
         super(Dummy, self).__init__(webinterface=webinterface, connector=connector)
@@ -275,7 +280,7 @@ class Dummy(OMPluginBase):
             logger.info("Registering hot water...")
             try:
                 hot_water_dto = self.connector.hot_water.register(
-                    external_id="hotwater1", name="boiler", min_temp=30.0, max_temp=70.0
+                    external_id="hotwater1", name="Dummy", min_temp=30.0, max_temp=70.0
                 )
                 logger.info("Registered %s" % hot_water_dto)
                 self._hot_water_dto = hot_water_dto
