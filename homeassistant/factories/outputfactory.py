@@ -1,9 +1,9 @@
 import json
 import logging
 from ..lists import Outputs
-from ..models import Light
+from ..models import Light, Output
 
-from ..const import OUTPUT_TYPE_LIGHT
+from ..const import OUTPUT_TYPE_LIGHT, OUTPUT_TYPE_DIMMER
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,9 @@ class OutputFactory(object):
     def from_webinterface(cls, webinterface) -> Outputs:
 
         json_outputs = json.loads(webinterface.get_output_configurations())
+        logger.info(json.dumps(json_outputs))
         json_status = json.loads(webinterface.get_output_status())
+        logger.info(json.dumps(json_status))
 
         # Unable to fetch output configurations correctly
         if json_outputs['success'] is False:
@@ -34,17 +36,19 @@ class OutputFactory(object):
             if output['name'] == "":
                 continue
 
+            status = next((item for item in json_status['status'] if item["id"] == output.get('id')), None)
+
             # Light
-            if output['type'] == OUTPUT_TYPE_LIGHT:
+            if output['module_type'] == "d":
+                output['dimmer'] = status["dimmer"]
 
-                # Set default state
-                status = next((item['status'] for item in json_status['status'] if item.get('id') == output.get('id')))
-                if status == 0:
-                    output['state'] = 'OFF'
-                else:
-                    output['state'] = 'ON'
+            # Set default state
+            if status["status"] == 0:
+                output['state'] = 'OFF'
+            else:
+                output['state'] = 'ON'
 
-                outputs.append(
-                    Light(output, webinterface=webinterface)
-                )
+            outputs.append(
+                Output(output, webinterface=webinterface)
+            )
         return outputs

@@ -1,15 +1,15 @@
 import logging
 import json
-from .entity import Entity
+from .device import Device
 from ..const import MQTT_HOMEASSISTANT_CONFIG_TOPIC, MQTT_SENSOR_STATE_TOPIC, SENSOR_UNIT
 
 logger = logging.getLogger(__name__)
 
 
-class Sensor(Entity):
+class Sensor(Device):
 
     def __init__(self, *args, webinterface):
-        Entity.__init__(self, *args)
+        Device.__init__(self, *args)
         self._webinterface = webinterface
 
     def get_mqtt_state_topic(self):
@@ -29,11 +29,12 @@ class Sensor(Entity):
         return json.dumps({
             'device_class': physical_quantity,
             'name': f"{name} {physical_quantity}".title(),
-            'unique_id': f'sensor_{sensor_id}',
-            'state_topic': f"openmotics/sensor/{sensor_id}/state",
+            'unique_id': f'renson_sensor_{sensor_id}',
+            'object_id': f'renson_sensor_{sensor_id}',
+            'state_topic': f"renson/sensor/{sensor_id}/state",
             'unit_of_measurement': SENSOR_UNIT[unit],
             'device': {
-                "identifiers": f'sensor_{sensor_id}',
+                "identifiers": [f'renson_sensor_{sensor_id}'],
                 "name": f"{name} {physical_quantity}".title()
             }
         })

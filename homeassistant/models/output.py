@@ -1,17 +1,17 @@
 import logging
 import json
-from .entity import Entity
-from ..const import MQTT_OUTPUT_STATE_TOPIC, MQTT_HOMEASSISTANT_CONFIG_TOPIC
+from .device import Device
+from ..const import MQTT_OUTPUT_STATE_TOPIC, MQTT_HOMEASSISTANT_CONFIG_TOPIC, OUTPUT_TYPE_DIMMER
 
 logger = logging.getLogger(__name__)
 
 
-class Output(Entity):
+class Output(Device):
 
     output_type = 'output'
 
     def __init__(self, *args, webinterface):
-        Entity.__init__(self, *args)
+        Device.__init__(self, *args)
         self._webinterface = webinterface
 
     def set_state(self, new_state):
@@ -44,7 +44,10 @@ class Output(Entity):
         return self.get('name').replace('_', ' ').title()
 
     def get_type(self):
-        return self.output_type
+        if self.get('module_type') in ["o", "O"]:
+            return "light"
+        elif self.get('module_type') in ["d"]:
+            return "number"
 
     def get_mqtt_state_topic(self):
         return MQTT_OUTPUT_STATE_TOPIC.replace('+', str(self.get('id')))
@@ -57,14 +60,27 @@ class Output(Entity):
 
     def get_mqtt_config_payload(self):
         output_id = self.get('id')
-        return json.dumps({
-            "~": f'openmotics/output/{output_id}',
+        payload = {
+            "~": f'renson/output/{output_id}',
             "name": self.pretty_name(),
-            "unique_id": f'output_{output_id}',
+            "unique_id": f'renson_output_{output_id}',
+            "object_id": f'renson_output_{output_id}',
             "state_topic": "~/state",
             "command_topic": "~/set",
             "device": {
-                "identifiers": f'output_{output_id}',
-                "name": self.pretty_name()
+                "identifiers": [f'renson_output_{output_id}'],
+                "name": self.pretty_name(),
+                "manufacturer": "Renson",
+                "suggested_area": "Bedroom"
             }
-        })
+        }
+        if self.get('module_type') == "d":
+            logger.info("Dimmer")
+            logger.info(self)
+            payload.update({"mode": "box"})
+            #payload.update({"percentage_state_topic": "~/speed/percentage_state",
+             #   "percentage_command_topic": "~/speed/percentage"})
+    #         payload.update({"brightness_scale": self.get("dimmer"),
+    #         "brightness_state_topic": "~/brightness/state",
+    # "brightness_command_topic": "~/brightness/set"})
+        return json.dumps(payload)

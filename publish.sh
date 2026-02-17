@@ -1,7 +1,7 @@
 #!/bin/bash
-if [ $# -ne 3 ]
+if [ $# -lt 3 ]
 then
-  echo "Usage: ./`basename $0` <package> <ip/hostname of gateway> <username>"
+  echo "Usage: ./`basename $0` <package> <ip/hostname of gateway> <username> <optional-password>"
 else
   if [ "$(uname -s)" = 'Darwin' ]
   then
@@ -12,7 +12,12 @@ else
     sedcmd='sed -r'
   fi
 
-  read -s -p "Enter password: " password
+  if [ $# -eq 4 ]
+  then
+    password=$4
+  else
+    read -s -p "Enter password: " password
+  fi
   echo
   login=`curl -sk -X GET "https://$2/login?username=$3&password=$password"`
   success=`echo $login | $sedcmd 's/(.+)"success": *([a-z]+)(.+)/\2/'`
@@ -32,4 +37,5 @@ else
   else
     echo "Login failed"
   fi
+  rm -f $1
 fi

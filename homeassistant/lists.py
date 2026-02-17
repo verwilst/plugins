@@ -1,13 +1,13 @@
 import json
 import logging
-from .models import Light, Output, Entity
+from .models import Light, Output, Device
 
 logger = logging.getLogger(__name__)
 
 
 class Entities(list):
 
-    def by_id(self, entity_id) -> Entity:
+    def by_id(self, entity_id) -> Device:
         return next((item for item in self if item.get('id') == entity_id), None)
 
     def publish_state(self, mqttclient) -> None:

@@ -1,12 +1,12 @@
 import logging
 import json
-from .entity import Entity
+from .device import Device
 from ..const import MQTT_INPUT_STATE_TOPIC, MQTT_HOMEASSISTANT_CONFIG_TOPIC
 
 logger = logging.getLogger(__name__)
 
 
-class Input(Entity):
+class Input(Device):
 
     def get_mqtt_state_topic(self):
         return MQTT_INPUT_STATE_TOPIC.replace('+', str(self.get('id')))
@@ -20,12 +20,13 @@ class Input(Entity):
     def get_mqtt_config_payload(self):
         input_id = self.get('id')
         payload = {
-            "~": f'openmotics/input/{input_id}',
+            "~": f'renson/input/{input_id}',
             "name": self.pretty_name(),
-            "unique_id": f'input_{input_id}',
+            "unique_id": f'renson_input_{input_id}',
+            "object_id": f'renson_input_{input_id}',
             "state_topic": "~/state",
             "device": {
-                "identifiers": f'input_{input_id}',
+                "identifiers": f'renson_input_{input_id}',
                 "name": self.pretty_name()
             }
         }

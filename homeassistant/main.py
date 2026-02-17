@@ -7,11 +7,12 @@ import time
 import six
 import re
 import sys
+import os
 
 from threading import Thread
 from .const import MQTT_OUTPUT_COMMAND_TOPIC, MQTT_HOMEASSISTANT_STATUS_TOPIC
 
-from .factories import OutputFactory, InputFactory, SensorFactory
+from .factories import OutputFactory, InputFactory, SensorFactory, ShutterFactory
 
 from plugin_runtime.base import OMPluginBase, PluginConfigChecker, om_expose, output_status, input_status, background_task
 if False:  # MYPY
@@ -25,7 +26,7 @@ class HomeAssistantPlugin(OMPluginBase):
     HomeAssistant plugin using an MQTT broker
     """
     name = 'HomeAssistant'
-    version = '0.1.0'
+    version = '0.0.66'
     interfaces = [('config', '1.0')]
 
     # configuration
@@ -38,7 +39,7 @@ class HomeAssistantPlugin(OMPluginBase):
          'description': 'MQTT broker port. Default: 1883'},
         {'name': 'username',
          'type': 'str',
-         'description': 'MQTT broker username. Default: openmotics'},
+         'description': 'MQTT broker username. Default: renson'},
         {'name': 'password',
          'type': 'password',
          'description': 'MQTT broker password.'}
@@ -46,7 +47,7 @@ class HomeAssistantPlugin(OMPluginBase):
 
     default_config = {
         'port': 1883,
-        'username': 'openmotics'
+        'username': 'renson'
     }
 
     def __init__(self, webinterface, connector):
@@ -60,18 +61,24 @@ class HomeAssistantPlugin(OMPluginBase):
 
         self._read_config()
 
-        paho_mqtt_wheel = '/opt/openmotics/python/plugins/HomeAssistant/paho_mqtt-1.6.1-py3-none-any.whl'
-        if paho_mqtt_wheel not in sys.path:
-            sys.path.insert(0, paho_mqtt_wheel)
-
         self.mqttclient = None
         self.outputs = None
         self.inputs = None
         self.sensors = None
-
-        self._load_configurations()
+        self.shutters = None
 
         self._try_mqtt_connect()
+
+        self._load_configurations()
+        self.outputs.publish_config(self.mqttclient)
+        self.inputs.publish_config(self.mqttclient)
+        self.sensors.publish_config(self.mqttclient)
+
+        # from platform_utils import Hardware
+        # h = Hardware
+        # logger.info(h.get_mac_address())
+        # logger.info(json.dumps(webinterface.get_status()))
+        # logger.info(json.dumps(webinterface.get_version()))
 
         logger.info("%s plugin started", self.name)
 
@@ -127,11 +134,6 @@ class HomeAssistantPlugin(OMPluginBase):
         return json.dumps({'success': True})
 
     def _load_configurations(self, replace=False):
-        """
-        Retry until we have retrieved every available configuration
-        """
-        should_load = True
-        while should_load:
             if self.outputs is None or replace is True:
                 try:
                     self.outputs = OutputFactory.from_webinterface(self.webinterface)
@@ -152,17 +154,19 @@ class HomeAssistantPlugin(OMPluginBase):
                     logger.info('Detected {0} sensors'.format(len(self.sensors)))
                 except RuntimeError as err:
                     logger.error(err)
-
-            should_load = not all([self.outputs, self.sensors])
-            if should_load:
-                logger.info('Retrying loading of configurations')
-                time.sleep(15)
+            if self.shutters is None or replace is True:
+                try:
+                    self.shutters = ShutterFactory.from_webinterface(self.webinterface)
+                    logger.info('Detected {0} shutters'.format(len(self.shutters)))
+                except RuntimeError as err:
+                    logger.error(err)
 
     def _try_mqtt_connect(self):
         if self._enabled is True:
             try:
+                sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
                 import paho.mqtt.client as mqtt
-                self.mqttclient = mqtt.Client()
+                self.mqttclient = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
                 if self._mqtt_username not in [None, '']:
                     logger.info("MQTTClient is using username '{0}' and password".format(self._mqtt_username))
                     self.mqttclient.username_pw_set(self._mqtt_username, self._mqtt_password)
@@ -206,9 +210,9 @@ class HomeAssistantPlugin(OMPluginBase):
         else:
             logger.info('Message with topic {0} ignored'.format(msg.topic))
 
-    def on_connect(self, client, userdata, flags, rc):
-        if rc != 0:
-            logger.error('Error connecting: rc={0}', rc)
+    def on_connect(self, client, userdata, flags, reason_code, properties):
+        if reason_code != 0:
+            logger.error('Error connecting: rc={0}', reason_code)
             return
 
         logger.info('Connected to MQTT broker {0}:{1}'.format(self._mqtt_hostname, self._mqtt_port))
